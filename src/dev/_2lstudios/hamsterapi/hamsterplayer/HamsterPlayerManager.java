@@ -1,13 +1,13 @@
 package dev._2lstudios.hamsterapi.hamsterplayer;
 
+import org.bukkit.entity.Player;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.bukkit.entity.Player;
-
 public class HamsterPlayerManager {
-    final Map<UUID, HamsterPlayer> hamsterPlayers = new HashMap<>();
+    private final Map<UUID, HamsterPlayer> hamsterPlayers = new HashMap<>();
 
     public HamsterPlayer add(final Player player) {
         final HamsterPlayer hamsterPlayer = new HamsterPlayer(player);

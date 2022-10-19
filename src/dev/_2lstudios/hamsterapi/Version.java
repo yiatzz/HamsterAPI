@@ -33,23 +33,23 @@ public class Version {
     public static Version getCurrentVersion() {
         if (currentVersion == null) {
             currentVersion = new Version(
-                HamsterAPI.getVersion(Bukkit.getServer())
-                    .split("v")[1]
-                    .split("_R")[0]
-                    .replace("_", ".")
+                    HamsterAPI.getVersion(Bukkit.getServer())
+                            .split("v")[1]
+                            .split("_R")[0]
+                            .replace("_", ".")
             );
         }
         return currentVersion;
     }
 
     public boolean isMajor(Version version) {
-        return 
-            (first > version.first)  
-            || 
-            (first == version.first && second > version.second) 
-            ||  
-            (first == version.first && second == version.second && third > version.third)
-        ;
+        return
+                (first > version.first)
+                        ||
+                        (first == version.first && second > version.second)
+                        ||
+                        (first == version.first && second == version.second && third > version.third)
+                ;
     }
 
     public boolean isMajor(String versionText) {

@@ -1,11 +1,5 @@
 package dev._2lstudios.hamsterapi.utils;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
-
 import dev._2lstudios.hamsterapi.wrappers.PacketWrapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -13,139 +7,126 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.AttributeKey;
+import net.minecraft.server.v1_8_R3.*;
+
+import java.io.IOException;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 public class BufferIO {
-	private final Class<?> packetDataSerializerClass, networkManagerClass, enumProtocolClass,
-			enumProtocolDirectionClass;
-	private final Inflater inflater;
-	private final int bukkitVersion;
-	private final int compressionThreshold;
+    private final Inflater inflater;
+    private final int compressionThreshold;
 
-	public BufferIO(final Reflection reflection, final String bukkitVersion, final int compressionThreshold) {
-		this.packetDataSerializerClass = reflection.getPacketDataSerializer();
-		this.networkManagerClass = reflection.getNetworkManager();
-		this.enumProtocolClass = reflection.getEnumProtocol();
-		this.enumProtocolDirectionClass = reflection.getEnumProtocolDirection();
-		this.inflater = new Inflater();
-		this.bukkitVersion = Integer.parseInt(bukkitVersion);
-		this.compressionThreshold = compressionThreshold;
-	}
+    public BufferIO(final int compressionThreshold) {
+        this.inflater = new Inflater();
+        this.compressionThreshold = compressionThreshold;
+    }
 
-	public ByteBuf split(final ByteBuf bytebuf) throws DecoderException, IOException, IllegalAccessException,
-			InvocationTargetException, NoSuchMethodException, InstantiationException, NoSuchFieldException {
-		bytebuf.markReaderIndex();
-		byte[] abyte = new byte[3];
+    public ByteBuf split(final ByteBuf bytebuf) throws DecoderException {
 
-		for (int i = 0; i < abyte.length; ++i) {
-			if (!bytebuf.isReadable()) {
-				bytebuf.resetReaderIndex();
-				throw new DecoderException("Unreadable byte");
-			}
+        bytebuf.markReaderIndex();
 
-			abyte[i] = bytebuf.readByte();
-			if (abyte[i] >= 0) {
-				final Object packetDataSerializer = packetDataSerializerClass.getConstructor(ByteBuf.class)
-						.newInstance(Unpooled.wrappedBuffer(abyte));
+        byte[] abyte = new byte[3];
 
-				try {
-					final Method packetDataSerializerBytes = packetDataSerializerClass.getMethod("e");
-					final int bytes = (int) packetDataSerializerBytes.invoke(packetDataSerializer);
+        for (int i = 0; i < abyte.length; ++i) {
+            if (!bytebuf.isReadable()) {
+                bytebuf.resetReaderIndex();
+                throw new DecoderException("Unreadable byte");
+            }
 
-					if (bytebuf.readableBytes() >= bytes) {
-						return bytebuf.readBytes(bytes);
-					}
+            abyte[i] = bytebuf.readByte();
+            if (abyte[i] >= 0) {
+                final PacketDataSerializer packetDataSerializer = new PacketDataSerializer(Unpooled.wrappedBuffer(abyte));
 
-					bytebuf.resetReaderIndex();
-				} finally {
-					packetDataSerializerClass.getMethod("release").invoke(packetDataSerializer);
-				}
+                try {
+                    final int bytes = packetDataSerializer.e();
 
-				throw new DecoderException("Too much unreadeable bytes");
-			}
-		}
+                    if (bytebuf.readableBytes() >= bytes) {
+                        return bytebuf.readBytes(bytes);
+                    }
 
-		return null;
-	}
+                    bytebuf.resetReaderIndex();
+                } finally {
+                    packetDataSerializer.release();
+                }
 
-	public ByteBuf decompress(final ByteBuf byteBuf) throws DecoderException, IllegalAccessException,
-			InvocationTargetException, NoSuchMethodException, InstantiationException, DataFormatException {
-		if (byteBuf.readableBytes() != 0 && compressionThreshold > -1) {
-			final Object packetData = packetDataSerializerClass.getConstructor(ByteBuf.class).newInstance(byteBuf);
-			final Class<?> packetDataClass = packetData.getClass();
-			final int bytes = (int) packetDataClass.getMethod("e").invoke(packetData); // packetData.e()
+                throw new DecoderException("Too much unreadeable bytes");
+            }
+        }
 
-			if (bytes == 0) {
-				return (ByteBuf) packetDataClass.getMethod("readBytes", int.class).invoke(packetData,
-						(int) packetDataClass.getMethod("readableBytes").invoke(packetData));
-			}
+        return null;
+    }
 
-			if (bytes < compressionThreshold) {
-				throw new DecoderException("[BufferIO] Badly compressed packet - size of " + bytes
-						+ " is below server threshold of " + compressionThreshold);
-			} else if (bytes > 2097152) {
-				throw new DecoderException("[BufferIO] Badly compressed packet - size of " + bytes
-						+ " is larger than protocol maximum of " + 2097152);
-			}
+    public ByteBuf decompress(final ByteBuf byteBuf) throws DecoderException,
+            DataFormatException {
+        if (byteBuf.readableBytes() != 0 && compressionThreshold > -1) {
 
-			final byte[] abyte = new byte[(int) packetDataClass.getMethod("readableBytes").invoke(packetData)];
+            final PacketDataSerializer packetData = new PacketDataSerializer(byteBuf);
+            final int bytes = packetData.e(); // packetData.e()
 
-			packetDataClass.getMethod("readBytes", byte[].class).invoke(packetData, abyte);
-			inflater.setInput(abyte);
+            if (bytes == 0) {
+                return packetData.readBytes(packetData.readableBytes());
+            }
 
-			final byte[] bbyte = new byte[bytes];
+            if (bytes < compressionThreshold) {
+                throw new DecoderException("[BufferIO] Badly compressed packet - size of " + bytes
+                        + " is below server threshold of " + compressionThreshold);
+            } else if (bytes > 2097152) {
+                throw new DecoderException("[BufferIO] Badly compressed packet - size of " + bytes
+                        + " is larger than protocol maximum of " + 2097152);
+            }
 
-			inflater.inflate(bbyte);
-			inflater.reset();
+            final byte[] abyte = new byte[(int) packetData.readableBytes()];
 
-			return Unpooled.wrappedBuffer(bbyte);
-		} else {
-			return byteBuf;
-		}
-	}
+            packetData.readBytes(abyte);
+            inflater.setInput(abyte);
 
-	public PacketWrapper decode(final ChannelHandlerContext chx, final ByteBuf byteBuf, final int maxCapacity)
-			throws DecoderException, IOException, IllegalAccessException, InvocationTargetException,
-			NoSuchMethodException, InstantiationException, NoSuchFieldException {
-		if (byteBuf.readableBytes() != 0) {
-			final int capacity = byteBuf.capacity();
+            final byte[] bbyte = new byte[bytes];
 
-			if (capacity > maxCapacity) {
-				if (byteBuf.refCnt() > 0) {
-					byteBuf.clear();
-				}
+            inflater.inflate(bbyte);
+            inflater.reset();
 
-				throw new DecoderException("[BufferIO] Max decoder capacity exceeded. capacity: " + capacity);
-			}
+            return Unpooled.wrappedBuffer(bbyte);
+        } else {
+            return byteBuf;
+        }
+    }
 
-			final Channel channel = chx.channel();
-			final Object packetDataSerializer = packetDataSerializerClass.getConstructor(ByteBuf.class)
-					.newInstance(byteBuf);
-			final Class<?> packetDataClass = packetDataSerializer.getClass();
-			final int id;
+    public PacketWrapper decode(final ChannelHandlerContext chx, final ByteBuf byteBuf, final int maxCapacity)
+            throws DecoderException, IOException, IllegalAccessException,
+            InstantiationException {
 
-			if (bukkitVersion > 1122) {
-				id = (int) packetDataClass.getMethod("g").invoke(packetDataSerializer);
-			} else {
-				id = (int) packetDataClass.getMethod("e").invoke(packetDataSerializer);
-			}
+        if (byteBuf.readableBytes() != 0) {
+            final int capacity = byteBuf.capacity();
 
-			final AttributeKey<?> attributeKey = (AttributeKey<?>) networkManagerClass.getDeclaredField("c").get(null);
-			final Object attribute = channel.attr(attributeKey).get();
-			final Object packet = enumProtocolClass.getMethod("a", enumProtocolDirectionClass, int.class)
-					.invoke(enumProtocolClass.cast(attribute),
-							enumProtocolDirectionClass.getField("SERVERBOUND").get(null), id);
+            if (capacity > maxCapacity) {
+                if (byteBuf.refCnt() > 0) {
+                    byteBuf.clear();
+                }
 
-			if (packet == null) {
-				throw new IOException("[BufferIO] Bad packet received. id: " + id);
-			}
+                throw new DecoderException("[BufferIO] Max decoder capacity exceeded. capacity: " + capacity);
+            }
 
-			final Class<?> packetClass = packet.getClass();
+            final Channel channel = chx.channel();
+            final PacketDataSerializer packetDataSerializer = new PacketDataSerializer(byteBuf);
 
-			packetClass.getMethod("a", packetDataSerializerClass).invoke(packet, packetDataSerializer);
+            final int id = packetDataSerializer.e();
 
-			return new PacketWrapper(packet);
-		} else {
-			return null;
-		}
-	}
+            final AttributeKey<EnumProtocol> attributeKey = NetworkManager.c;
+
+            final EnumProtocol attribute = channel.attr(attributeKey).get();
+
+            Packet<?> packet = attribute.a(EnumProtocolDirection.SERVERBOUND, id);
+
+            if (packet == null) {
+                throw new IOException("[BufferIO] Bad packet received. id: " + id);
+            }
+
+            packet.a(packetDataSerializer);
+
+            return new PacketWrapper(packet);
+        } else {
+            return null;
+        }
+    }
 }
