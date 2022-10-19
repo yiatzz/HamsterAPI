@@ -1,7 +1,6 @@
 package dev._2lstudios.hamsterapi.wrappers;
 
 import dev._2lstudios.hamsterapi.enums.PacketType;
-import net.minecraft.server.v1_8_R3.Packet;
 import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 
@@ -10,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PacketWrapper {
-    private final Packet<?> packet;
+    private final Object packet;
     private final String name;
 
     private final Map<String, String> strings = new HashMap<>();
@@ -21,12 +20,12 @@ public class PacketWrapper {
     private final Map<String, ItemStack> items = new HashMap<>();
     private final Map<String, Object> objects = new HashMap<>();
 
-    public PacketWrapper(final Packet<?> packet) {
+    public PacketWrapper(final Object packet) {
 
         this.packet = packet;
         this.name = packet.getClass().getSimpleName();
 
-        final Class<? extends Packet> packetClass = packet.getClass();
+        final Class<?> packetClass = packet.getClass();
 
         for (final Field field : packetClass.getDeclaredFields()) {
             try {

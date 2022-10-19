@@ -7,7 +7,6 @@ import dev._2lstudios.hamsterapi.wrappers.PacketWrapper;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import net.minecraft.server.v1_8_R3.Packet;
 import org.bukkit.Server;
 import org.bukkit.plugin.PluginManager;
 
@@ -26,7 +25,7 @@ public class HamsterChannelHandler extends ChannelDuplexHandler {
     public void write(final ChannelHandlerContext channelHandlerContext, final Object packet,
                       final ChannelPromise channelPromise) throws Exception {
 
-        final PacketWrapper packetWrapper = new PacketWrapper((Packet<?>) packet);
+        final PacketWrapper packetWrapper = new PacketWrapper(packet);
         final boolean async = !server.isPrimaryThread();
         final PacketSendEvent event = new PacketSendEvent(channelHandlerContext, hamsterPlayer, packetWrapper, async);
 
@@ -43,7 +42,7 @@ public class HamsterChannelHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(final ChannelHandlerContext channelHandlerContext, final Object packet) throws Exception {
-        final PacketWrapper packetWrapper = new PacketWrapper((Packet<?>) packet);
+        final PacketWrapper packetWrapper = new PacketWrapper(packet);
         final boolean async = !server.isPrimaryThread();
         final PacketReceiveEvent event = new PacketReceiveEvent(channelHandlerContext, hamsterPlayer, packetWrapper, async);
 
