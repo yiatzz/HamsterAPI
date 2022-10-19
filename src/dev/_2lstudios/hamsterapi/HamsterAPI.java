@@ -6,7 +6,6 @@ import dev._2lstudios.hamsterapi.listeners.PlayerJoinListener;
 import dev._2lstudios.hamsterapi.listeners.PlayerQuitListener;
 import dev._2lstudios.hamsterapi.messengers.BungeeMessenger;
 import dev._2lstudios.hamsterapi.utils.BufferIO;
-import dev._2lstudios.hamsterapi.utils.Reflection;
 import net.minecraft.server.v1_8_R3.MinecraftServer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -15,7 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class HamsterAPI extends JavaPlugin {
     private static HamsterAPI instance;
-    private Reflection reflection;
+    //private Reflection reflection;
     private BufferIO bufferIO;
     private BungeeMessenger bungeeMessenger;
     private HamsterPlayerManager hamsterPlayerManager;
@@ -34,13 +33,13 @@ public class HamsterAPI extends JavaPlugin {
     }
 
     private void initialize() {
-        final Server server = getServer();
+        //final Server server = getServer();
 
         int compressionThreshold = MinecraftServer.getServer().getPropertyManager().getInt("network_compression_threshold", 256);
 
         setInstance(this);
 
-        this.reflection = new Reflection(server.getClass().getPackage().getName().split("\\.")[3]);
+        //  this.reflection = new Reflection(server.getClass().getPackage().getName().split("\\.")[3]);
         this.bufferIO = new BufferIO(compressionThreshold);
         this.hamsterPlayerManager = new HamsterPlayerManager();
         this.bungeeMessenger = new BungeeMessenger(this);
@@ -101,7 +100,9 @@ public class HamsterAPI extends JavaPlugin {
         return this.hamsterPlayerManager;
     }
 
+    /*
     public Reflection getReflection() {
         return this.reflection;
     }
+     */
 }
