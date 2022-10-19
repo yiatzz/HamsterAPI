@@ -1,18 +1,16 @@
 package dev._2lstudios.hamsterapi.wrappers;
 
-import dev._2lstudios.hamsterapi.HamsterAPI;
 import dev._2lstudios.hamsterapi.enums.PacketType;
-import dev._2lstudios.hamsterapi.utils.Reflection;
+import net.minecraft.server.v1_8_R3.Packet;
+import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
 public class PacketWrapper {
-    private final Class<?> craftItemStackClass;
-    private final Object packet;
+    private final Packet<?> packet;
     private final String name;
 
     private final Map<String, String> strings = new HashMap<>();
@@ -23,16 +21,12 @@ public class PacketWrapper {
     private final Map<String, ItemStack> items = new HashMap<>();
     private final Map<String, Object> objects = new HashMap<>();
 
-    public PacketWrapper(final Object packet) {
-        final Reflection reflection = HamsterAPI.getInstance().getReflection();
-        final Class<?> minecraftKeyClass = reflection.getMinecraftKey();
-        final Class<?> packetClass = packet.getClass();
-        final Class<?> itemStackClass = reflection.getItemStack();
+    public PacketWrapper(final Packet<?> packet) {
 
-        this.craftItemStackClass = reflection.getCraftItemStack();
-        Class<?> nmsItemStackClass = reflection.getItemStack();
         this.packet = packet;
-        this.name = packetClass.getSimpleName();
+        this.name = packet.getClass().getSimpleName();
+
+        final Class<? extends Packet> packetClass = packet.getClass();
 
         for (final Field field : packetClass.getDeclaredFields()) {
             try {
@@ -51,13 +45,10 @@ public class PacketWrapper {
                     this.doubles.put(fieldName, (Double) value);
                 } else if (value instanceof Boolean) {
                     this.booleans.put(fieldName, (Boolean) value);
-                } else if (minecraftKeyClass != null && minecraftKeyClass.isInstance(value)) {
-                    this.strings.put(fieldName, value.toString());
                 }
 
-                if (itemStackClass.isInstance(value)) {
-                    final Method asBukkitCopy = craftItemStackClass.getMethod("asBukkitCopy", nmsItemStackClass);
-                    final ItemStack itemStack = (ItemStack) asBukkitCopy.invoke(null, value);
+                if (value instanceof net.minecraft.server.v1_8_R3.ItemStack) {
+                    final ItemStack itemStack = CraftItemStack.asBukkitCopy((net.minecraft.server.v1_8_R3.ItemStack) value);
 
                     this.items.put(fieldName, itemStack);
                     this.objects.put(fieldName, itemStack);
@@ -105,8 +96,7 @@ public class PacketWrapper {
     public void write(final String key, final ItemStack itemStack) {
         try {
             final Field field = this.packet.getClass().getDeclaredField(key);
-            final Method asNmsCopy = craftItemStackClass.getMethod("asNMSCopy", ItemStack.class);
-            final Object nmsItemStack = asNmsCopy.invoke(null, itemStack);
+            final net.minecraft.server.v1_8_R3.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(itemStack);
 
             field.setAccessible(true);
             field.set(packet, nmsItemStack);
