@@ -35,7 +35,7 @@ public class HamsterAPI extends JavaPlugin {
     private void initialize() {
         //final Server server = getServer();
 
-        int compressionThreshold = MinecraftServer.getServer().getPropertyManager().getInt("network_compression_threshold", 256);
+        int compressionThreshold = MinecraftServer.getServer().getPropertyManager().getInt("network-compression-threshold", 256);
 
         setInstance(this);
 
